@@ -29,6 +29,7 @@ private:
     PID pid;
     bool usingPID = false;
 public:
+    DCMotor() = default;
     DCMotor(Adafruit_DCMotor *motor, int encoderA, int encoderB) {
         this->motor = motor;
         this->encoderA_pin = encoderA;
