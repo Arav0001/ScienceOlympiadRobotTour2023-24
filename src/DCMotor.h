@@ -9,12 +9,14 @@
 class DCMotor {
 private:
     Adafruit_DCMotor *motor;
-    int encoderA_pin;
-    int encoderB_pin;
+    int encA_pin;
+    int encB_pin;
     
     float power = 0.0f;
 
     volatile int pos = 0;
+    volatile float aVel = 0.0f;
+    volatile long pt = 0;
 
     static DCMotor *instance;
 
@@ -23,31 +25,40 @@ private:
     }
 
     void readEncoder() {
-        digitalRead(encoderA_pin) && !digitalRead(encoderB_pin)? pos++ : pos--;
+        bool a = digitalRead(encA_pin);
+        
+        a && !digitalRead(encB_pin) ? pos++ : pos--;
+
+        if (a) {
+            long t = micros();
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) aVel = 2.0f * PI / ((t - pt) / 1.0e6f);
+
+            pt = t;
+        }
     }
 
-    PID pid;
-    bool usingPID = false;
+    PID posPID;
+    PID velPID;
 public:
     DCMotor() = default;
-    DCMotor(Adafruit_DCMotor *motor, int encoderA, int encoderB) {
+    DCMotor(Adafruit_DCMotor *motor, int encA, int encB) {
         this->motor = motor;
-        this->encoderA_pin = encoderA;
-        this->encoderB_pin = encoderB;
+        this->encA_pin = encA;
+        this->encB_pin = encB;
 
-        pinMode(encoderA_pin, INPUT_PULLUP);
-        pinMode(encoderB_pin, INPUT_PULLUP);
+        pinMode(encA_pin, INPUT_PULLUP);
+        pinMode(encB_pin, INPUT_PULLUP);
 
-        attachInterrupt(digitalPinToInterrupt(encoderA_pin), isr, RISING);
+        attachInterrupt(digitalPinToInterrupt(encA_pin), isr, RISING);
 
         instance = this;
 
-        this->pid = PID();
+        this->posPID = PID();
     }
 
     void setPIDcoefficients(float Kp, float Ki, float Kd, float Ka) {
-        pid.setCoefficients(Kp, Ki, Kd, Ka);
-        usingPID = true;
+        posPID.setCoefficients(Kp, Ki, Kd, Ka);
+        velPID.setCoefficients(Kp, Ki, Kd, Ka);
     }
 
     void setPower(float power) {
@@ -67,22 +78,29 @@ public:
         this->power = power;
     }
 
-    void runToPos(float target) {
-        int currentPos;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) currentPos = pos;
+    void setPosition(float target) {
+        setPower(posPID.update(getPosition(), target, 255.0f));
+    }
 
-        if (usingPID) setPower(pid.update(currentPos, target, 255.0f));
+    void setAngularVelocity(float speed) {
+        setPower(velPID.update(getAngularVelocity(), speed, 1.0f));
     }
 
     float getPower() {
         return power;
     }
 
-    void resetEncoderPos() {
+    float getAngularVelocity() {
+        float cVel;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) cVel = aVel;
+        return cVel;
+    }
+
+    void resetPosition() {
         pos = 0;
     }
     
-    int getEncoderPos() {
+    int getPosition() {
         int currentPos;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) currentPos = pos;
         return currentPos;

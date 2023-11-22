@@ -3,12 +3,12 @@
 #include "DCMotor.h"
 #include <SPI.h>
 
+#include <string.h>
+
 Adafruit_MotorShield shield = Adafruit_MotorShield();
 
-DCMotor leftMotor = DCMotor(shield.getMotor(1), 2, 4);
-const float totalDistanceInch = 100; // Inch
-const float totalDistanceCm = 100; // Cm
-const float targetTime = 60; // Sec
+DCMotor leftMotor(shield.getMotor(1), 2, 4);
+
 void setup() {
     Serial.begin(9600);
 
@@ -17,7 +17,7 @@ void setup() {
 }
 
 void loop() {
-    leftMotor.runToPos(sin(millis() / 100.0f) * 100.0f);
+    //leftMotor.setAngularVelocity(1000);
 
-    Serial.println(leftMotor.getEncoderPos());
+    Serial.println(leftMotor.getAngularVelocity());
 }
