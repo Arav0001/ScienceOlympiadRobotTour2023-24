@@ -13,10 +13,13 @@ private:
     int encB_pin;
     
     float power = 0.0f;
+    float direction = 1.0f;
 
     volatile int pos = 0;
     volatile float aVel = 0.0f;
     volatile long pt = 0;
+
+    int TICKS_PER_REVOLUTION = 0.0f;
 
     static DCMotor *instance;
 
@@ -25,13 +28,11 @@ private:
     }
 
     void readEncoder() {
-        bool a = digitalRead(encA_pin);
-        
-        a && !digitalRead(encB_pin) ? pos++ : pos--;
-
-        if (a) {
+        if (digitalRead(encA_pin)) {
+            !digitalRead(encB_pin) ? pos++ : pos--;
+            
             long t = micros();
-            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) aVel = 2.0f * PI / ((t - pt) / 1.0e6f);
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) aVel = 2.0f * PI * 1.0e6f / (t - pt) / (float)TICKS_PER_REVOLUTION;
 
             pt = t;
         }
@@ -41,10 +42,12 @@ private:
     PID velPID;
 public:
     DCMotor() = default;
-    DCMotor(Adafruit_DCMotor *motor, int encA, int encB) {
+    DCMotor(Adafruit_DCMotor *motor, int encA, int encB, int TPR) {
         this->motor = motor;
         this->encA_pin = encA;
         this->encB_pin = encB;
+
+        this->TICKS_PER_REVOLUTION = TPR;
 
         pinMode(encA_pin, INPUT_PULLUP);
         pinMode(encB_pin, INPUT_PULLUP);
@@ -56,6 +59,10 @@ public:
         this->posPID = PID();
     }
 
+    void reverse() {
+        direction = -direction;
+    }
+
     void setPIDcoefficients(float Kp, float Ki, float Kd, float Ka) {
         posPID.setCoefficients(Kp, Ki, Kd, Ka);
         velPID.setCoefficients(Kp, Ki, Kd, Ka);
@@ -63,17 +70,18 @@ public:
 
     void setPower(float power) {
         int dir;
+        float _power = power * direction;
 
-        if (power > 0.0f) {
+        if (_power > 0.0f) {
             dir = FORWARD;
-        } else if (power < 0.0f) {
+        } else if (_power < 0.0f) {
             dir = BACKWARD;
         } else {
             dir = BRAKE;
         }
 
         this->motor->run(dir);
-        this->motor->setSpeed((int)abs(power * 255.0f));
+        this->motor->setSpeed((int)abs(_power * 255.0f));
         
         this->power = power;
     }
@@ -82,28 +90,30 @@ public:
         setPower(posPID.update(getPosition(), target, 255.0f));
     }
 
-    void setAngularVelocity(float speed) {
-        setPower(velPID.update(getAngularVelocity(), speed, 1.0f));
+    // rad/s
+    void setAngularVelocity(float velocity) {
+        setPower(velPID.update(getAngularVelocity(), velocity, 1.0f));
     }
 
     float getPower() {
         return power;
-    }
-
-    float getAngularVelocity() {
-        float cVel;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) cVel = aVel;
-        return cVel;
-    }
-
-    void resetPosition() {
-        pos = 0;
     }
     
     int getPosition() {
         int currentPos;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) currentPos = pos;
         return currentPos;
+    }
+
+    void resetPosition() {
+        pos = 0;
+    }
+
+    // rad/s
+    float getAngularVelocity() {
+        float cVel;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) cVel = aVel;
+        return cVel;
     }
 };
 

@@ -14,22 +14,34 @@ private:
     DCMotor leftMotor;
     DCMotor rightMotor;
 
-    const float WHEEL_DIAMETER = 65.0f / 10.0f / 2.54f;
-    const int TICKS_PER_REVOLUTION = 300;
-    const float TRACK_WIDTH = 0.0f;
+    float WHEEL_DIAMETER;
+    int TICKS_PER_REVOLUTION;
+    float TRACK_WIDTH;
 
     Pose2D pose;
 
 public:
     DifferentialDrive(int leftMotor, int rightMotor, int leftEncA, int leftEncB, int rightEncA, int rightEncB) {
        this->shield = Adafruit_MotorShield();
-       this->leftMotor = DCMotor(shield.getMotor(leftMotor), leftEncA, leftEncB);
-       this->rightMotor = DCMotor(shield.getMotor(rightMotor), rightEncA, leftEncB);
+       this->leftMotor = DCMotor(shield.getMotor(leftMotor), leftEncA, leftEncB, TICKS_PER_REVOLUTION);
+       this->rightMotor = DCMotor(shield.getMotor(rightMotor), rightEncA, leftEncB, TICKS_PER_REVOLUTION);
 
        pose = Pose2D();
-
-       shield.begin();
     }
 
-    
+    void setDriveConstants(float wheelDiameter, int ticksPerRevolution, float trackWidth) {
+        this->WHEEL_DIAMETER = wheelDiameter;
+        this->TICKS_PER_REVOLUTION = ticksPerRevolution;
+        this->TRACK_WIDTH = trackWidth;
+    }
+
+    bool init() {
+        return shield.begin() && WHEEL_DIAMETER != NULL && TICKS_PER_REVOLUTION != NULL && TRACK_WIDTH != NULL;
+    }
+
+    void drive(float leftSpeed, float rightSpeed) {
+        // rad/s
+        leftMotor.setAngularVelocity(leftSpeed);
+        rightMotor.setAngularVelocity(rightSpeed);
+    }
 };
