@@ -26,8 +26,10 @@ void setup() {
     drive.setDriveConstants(WHEEL_DIAMETER, TICKS_PER_REVOLUTION, TRACK_WIDTH);
 
     drive.init();
+
+    drive.turnOnArc(1.2, 10, 8);
 }
 
 void loop() {
-    drive.drive(9.0f, 9.0f);
+    // drive.stop();
 }

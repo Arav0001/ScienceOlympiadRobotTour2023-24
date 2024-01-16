@@ -23,4 +23,14 @@ struct Pose2D {
 
         return result;
     }
+
+    Pose2D operator*(const float& scalar) {
+        Pose2D result;
+
+        result.x = x * scalar;
+        result.y = y * scalar;
+        result.theta = theta;
+
+        return result;
+    }
 };
