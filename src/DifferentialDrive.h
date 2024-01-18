@@ -11,8 +11,8 @@
 class DifferentialDrive {
 private:
     Adafruit_MotorShield shield;
-    DCMotor leftMotor;
-    DCMotor rightMotor;
+    DCMotor* leftMotor;
+    DCMotor* rightMotor;
 
     float WHEEL_DIAMETER = NULL;
     int TICKS_PER_REVOLUTION = NULL;
@@ -26,8 +26,8 @@ private:
 public:
     DifferentialDrive(int leftMotor, int rightMotor, int leftEncA, int leftEncB, int rightEncA, int rightEncB) {
        this->shield = Adafruit_MotorShield();
-       this->leftMotor = DCMotor(shield.getMotor(leftMotor), leftEncA, leftEncB, TICKS_PER_REVOLUTION);
-       this->rightMotor = DCMotor(shield.getMotor(rightMotor), rightEncA, leftEncB, TICKS_PER_REVOLUTION);
+       this->leftMotor = new DCMotor(shield.getMotor(leftMotor), leftEncA, leftEncB, TICKS_PER_REVOLUTION);
+       this->rightMotor = new DCMotor(shield.getMotor(rightMotor), rightEncA, leftEncB, TICKS_PER_REVOLUTION);
 
        pose = Pose2D();
     }
@@ -47,20 +47,20 @@ public:
         long start = micros();
 
         while((micros() - start) / 1e6 <= time) {
-            leftMotor.setAngularVelocity(leftSpeed);
-            rightMotor.setAngularVelocity(rightSpeed);
+            leftMotor->setAngularVelocity(leftSpeed);
+            rightMotor->setAngularVelocity(rightSpeed);
         }
         
         stop();
     }
 
     void stop() {
-        leftMotor.setPower(0.0f);
-        rightMotor.setPower(0.0f);
+        leftMotor->setPower(0.0f);
+        rightMotor->setPower(0.0f);
     }
 
     void straight(float d, float time) {
-        const float v = d / (WHEEL_DIAMETER * PI) / time;
+        const float v = d / (WHEEL_DIAMETER * M_PI) / time;
 
         if (abs(v) <= MAX_ANGULAR_VELOCITY) {
             drive(v, v, time);
@@ -75,8 +75,8 @@ public:
         const float dl = theta * WHEEL_TO_CENTER;
         const float dr = -theta * WHEEL_TO_CENTER;
 
-        const float vl = dl / (WHEEL_DIAMETER * PI) / time;
-        const float vr = dr / (WHEEL_DIAMETER * PI) / time;
+        const float vl = dl / (WHEEL_DIAMETER * M_PI) / time;
+        const float vr = dr / (WHEEL_DIAMETER * M_PI) / time;
 
         if (abs(vl) <= MAX_ANGULAR_VELOCITY && abs(vr) <= MAX_ANGULAR_VELOCITY) {
             drive(vl, vr, time);
@@ -96,8 +96,8 @@ public:
         const float dl = (radius - sign * WHEEL_TO_CENTER) * theta;
         const float dr = (radius + sign * WHEEL_TO_CENTER) * theta;
 
-        const float vl = dl / (WHEEL_DIAMETER * PI) / time;
-        const float vr = dr / (WHEEL_DIAMETER * PI) / time;
+        const float vl = dl / (WHEEL_DIAMETER * M_PI) / time;
+        const float vr = dr / (WHEEL_DIAMETER * M_PI) / time;
 
         if (abs(vl) <= MAX_ANGULAR_VELOCITY && abs(vr) <= MAX_ANGULAR_VELOCITY) {
             drive(vl, vr, time);

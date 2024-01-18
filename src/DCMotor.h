@@ -1,5 +1,3 @@
-#pragma once
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
@@ -15,10 +13,15 @@ private:
     int encB_pin;
     
     float power = 0.0f;
-    float direction = 1.0f;
 
     volatile int pos = 0;
-    volatile float aVel = 0.0f;
+    volatile int ppos = 0;
+
+    volatile float vel = 0.0f;
+    const float alpha = 0.075f;
+    volatile float fvel = 0.0f;
+
+    volatile long t = 0;
     volatile long pt = 0;
 
     int TICKS_PER_REVOLUTION = 0.0f;
@@ -31,12 +34,7 @@ private:
 
     void readEncoder() {
         if (digitalRead(encA_pin)) {
-            !digitalRead(encB_pin) ? pos++ : pos--;
-            
-            long t = micros();
-            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) aVel = 2.0f * PI * 1.0e6f / (t - pt) / (float)TICKS_PER_REVOLUTION;
-
-            pt = t;
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) !digitalRead(encB_pin) ? pos++ : pos--;
         }
     }
 
@@ -50,7 +48,7 @@ public:
         this->encB_pin = encB;
 
         this->TICKS_PER_REVOLUTION = TPR;
-
+        
         pinMode(encA_pin, INPUT_PULLUP);
         pinMode(encB_pin, INPUT_PULLUP);
 
@@ -61,29 +59,42 @@ public:
         this->posPID = PID();
     }
 
-    void reverse() {
-        direction = -direction;
+    void setPosPIDcoefficients(float Kp, float Ki, float Kd, float Ka) {
+        posPID.setCoefficients(Kp, Ki, Kd, Ka);
     }
 
-    void setPIDcoefficients(float Kp, float Ki, float Kd, float Ka) {
-        posPID.setCoefficients(Kp, Ki, Kd, Ka);
+    void setVelPIDcoefficients(float Kp, float Ki, float Kd, float Ka) {
         velPID.setCoefficients(Kp, Ki, Kd, Ka);
+    }
+
+    void update() {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            t = millis();
+            long dt = t - pt;
+            int dp = pos - ppos;
+
+            vel = dp / (dt / 1.0e3f) / (float)TICKS_PER_REVOLUTION * 2.0f * M_PI;
+
+            fvel = alpha * vel + (1.0f - alpha) * fvel;
+
+            pt = t;
+            ppos = pos;
+        }
     }
 
     void setPower(float power) {
         int dir;
-        float _power = power * direction;
 
-        if (_power > 0.0f) {
+        if (power > 0.0f) {
             dir = FORWARD;
-        } else if (_power < 0.0f) {
+        } else if (power < 0.0f) {
             dir = BACKWARD;
         } else {
-            dir = BRAKE;
+            dir = RELEASE;
         }
 
         this->motor->run(dir);
-        this->motor->setSpeed((int)abs(_power * 255.0f));
+        this->motor->setSpeed((int)abs(power * 255.0f));
         
         this->power = power;
     }
@@ -94,17 +105,15 @@ public:
 
     // rad/s
     void setAngularVelocity(float velocity) {
-        setPower(velPID.update(getAngularVelocity(), velocity, 1.0f));
+        setPower(velPID.update(getAngularVelocity(), velocity, 255.0f));
     }
 
     float getPower() {
         return power;
     }
-    
+
     int getPosition() {
-        int currentPos;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) currentPos = pos;
-        return currentPos;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) return pos;
     }
 
     void resetPosition() {
@@ -113,9 +122,8 @@ public:
 
     // rad/s
     float getAngularVelocity() {
-        float cVel;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) cVel = aVel;
-        return cVel;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) return fvel;
+        return NULL;
     }
 };
 
