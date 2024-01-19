@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
@@ -26,18 +28,6 @@ private:
 
     int TICKS_PER_REVOLUTION = 0.0f;
 
-    static DCMotor *instance;
-
-    static void isr() {
-        instance->readEncoder();
-    }
-
-    void readEncoder() {
-        if (digitalRead(encA_pin)) {
-            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) !digitalRead(encB_pin) ? pos++ : pos--;
-        }
-    }
-
     PID posPID;
     PID velPID;
 public:
@@ -52,10 +42,6 @@ public:
         pinMode(encA_pin, INPUT_PULLUP);
         pinMode(encB_pin, INPUT_PULLUP);
 
-        attachInterrupt(digitalPinToInterrupt(encA_pin), isr, RISING);
-
-        instance = this;
-
         this->posPID = PID();
     }
 
@@ -67,6 +53,12 @@ public:
         velPID.setCoefficients(Kp, Ki, Kd, Ka);
     }
 
+    void readEncoder() {
+        if (digitalRead(encA_pin)) {
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) !digitalRead(encB_pin) ? pos++ : pos--;
+        }
+    }
+    
     void update() {
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             t = millis();
@@ -126,5 +118,3 @@ public:
         return NULL;
     }
 };
-
-DCMotor *DCMotor::instance;
