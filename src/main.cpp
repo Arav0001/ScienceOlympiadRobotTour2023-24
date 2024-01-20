@@ -14,9 +14,9 @@
 #define RIGHT_ENCODER_A 3
 #define RIGHT_ENCODER_B 5
 
-#define WHEEL_DIAMETER 62.4f / 10.0f
+#define WHEEL_DIAMETER 65.0f / 10.0f
 #define TICKS_PER_REVOLUTION 300
-#define TRACK_WIDTH 13.1f
+#define TRACK_WIDTH 16.35f
 
 long startTime = 0;
 
@@ -406,9 +406,6 @@ void setup() {
     rightSequence = PositionProfileSequence(0.0f, startTime, 0.1f, WHEEL_DIAMETER / 2.0f, TICKS_PER_REVOLUTION);
 
     straight(50.0f, 1.5f);
-    turnLeft(1.0f);
-    straight(50.0f, 1.5f);
-    turnRight(1.0f);
 }
 
 void loop() {
