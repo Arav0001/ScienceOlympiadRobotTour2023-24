@@ -407,6 +407,8 @@ void setup() {
 
     straight(50.0f, 1.5f);
     turnLeft(1.0f);
+    straight(50.0f, 1.5f);
+    turnRight(1.0f);
 }
 
 void loop() {
@@ -426,11 +428,11 @@ void turn(float radians, float time) {
 }
 
 void turnLeft(float time) {
-    turn(M_PI / 2.0f, time);
+    turn(-M_PI / 2.0f, time);
 }
 
 void turnRight(float time) {
-    turn(-M_PI / 2.0f, time);
+    turn(M_PI / 2.0f, time);
 }
 
 void pause(float time) {
