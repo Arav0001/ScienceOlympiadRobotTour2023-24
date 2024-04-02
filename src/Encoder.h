@@ -1,3 +1,6 @@
+#pragma once
+
+#include <Arduino.h>
 class encoder{
   private: 
     int enA, enA, pos1; 
